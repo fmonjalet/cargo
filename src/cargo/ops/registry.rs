@@ -7,7 +7,7 @@ use std::time::Duration;
 use std::{cmp, env};
 
 use crates_io::{NewCrate, NewCrateDependency, Registry};
-use curl::easy::{Easy, InfoType, SslOpt};
+use curl::easy::{Auth, Easy, InfoType, SslOpt};
 use log::{log, Level};
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
@@ -404,10 +404,22 @@ pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
         || user_agent.is_some())
 }
 
+fn default_proxy_auth() -> Auth {
+    Auth::new()
+        .basic(true)
+        .digest(true)
+        .digest_ie(true)
+        .gssnegotiate(true)
+        .ntlm(true)
+        .ntlm_wb(true)
+        .clone()
+}
+
 /// Configure a libcurl http handle with the defaults options for Cargo
 pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<HttpTimeout> {
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
+        handle.proxy_auth(&default_proxy_auth())?;
     }
     if let Some(cainfo) = config.get_path("http.cainfo")? {
         handle.cainfo(&cainfo.val)?;
